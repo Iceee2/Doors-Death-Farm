@@ -1,0 +1,180 @@
+getgenv().c = false
+
+local deathCounterWebhook = nil -- enter any webhook there to send amount of deaths to discord (https://discord.com/api/webhooks/0/token)
+local discordToken = "" -- enter any token there to display amount of deaths in discord
+
+local HttpService = game:GetService("HttpService")
+
+local function isWebhookValid(webhook)
+    local success, isValid = pcall(function()
+        if typeof(webhook) == "string" and webhook:gsub("%s", "") ~= "" and webhook:match("https://discord.com/api/webhooks/[%d]+/[%w-_]+") then
+			local body = HttpService:JSONDecode(request({
+                Url = webhook,
+                Method = "GET"
+            }).Body)
+            if not body.code and (body.id and webhook:match(body.id)) and body.token and (body.url == webhook) then
+				return true
+            end
+        end
+        return false
+    end)
+    return success and isValid
+end
+
+local function isTokenValid(token)
+    local success, isValid = pcall(function()
+        if typeof(token) == "string" and token:gsub("%s", "") ~= "" then
+			return true
+        end
+        return false
+    end)
+    return success and isValid
+end
+
+local isWebhookReallyValid = isWebhookValid(deathCounterWebhook)
+local isTokenReallyValid = isTokenValid(discordToken)
+
+writefile("doorsdeathwebhook.txt", `{isWebhookReallyValid}{isWebhookReallyValid and `\n{deathCounterWebhook}` or ""}`)
+writefile("doorsdeathtoken.txt", `{isTokenReallyValid}{isTokenReallyValid and `\n{discordToken}` or ""}`)
+writefile("doorsdeathfarm.txt", [[local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local player = Players.LocalPlayer
+
+while not player do -- some executors have pre replicated first
+    task.wait()
+    player = Players.LocalPlayer
+end
+
+local function string2bool(text: string)
+    if text:lower() == "true" then
+        return true
+    elseif text:lower() == "false" then
+        return false
+    else
+        return nil
+    end
+end
+
+if getgenv().c then return end getgenv().c=true
+
+local success, data = pcall(function() return require(game:GetService("ReplicatedStorage"):FindFirstChild("ReplicaDataModule")).data end)
+while not success or not data or not data.Stats do
+    task.wait()
+    success, data = pcall(function() return require(game:GetService("ReplicatedStorage"):FindFirstChild("ReplicaDataModule")).data end)
+end
+
+task.spawn(function()
+    local active1, webhook = unpack(readfile("doorsdeathwebhook.txt"):split("\n"))
+    local active2, token = unpack(readfile("doorsdeathtoken.txt"):split("\n"))
+    local deaths = data and data.Stats and data.Stats.Deaths or "Unknown"
+    print(deaths)
+    if string2bool(active1) then
+        request({
+	        Url = webhook,
+	        Method = "POST",
+	        Headers = {
+		        ["Content-Type"] = "application/json"
+	        },
+	        Body = HttpService:JSONEncode({
+	            content = `Deaths counter: {deaths}`
+	        })
+        })
+    end
+    if string2bool(active2) then
+        request({
+	        Url = "https://ptb.discordapp.com/api/v6/users/@me/settings",
+	        Method = "PATCH",
+	        Headers = {
+                Authorization = token,
+                ["Content-Type"] = "application/json"
+	        },
+	        Body = HttpService:JSONEncode({
+	    	    custom_status = {
+                    text = `Deaths in doors: {deaths}`
+                }
+	        })
+        })
+    end
+end)
+
+-- synz devs if you dont fix waitforchild your families will be publicly executed infront of all 8 billion people including you, and then you'll die in the worst possible way in this universe
+local RemotesFolder = game:GetService("ReplicatedStorage"):FindFirstChild("RemotesFolder")
+while not RemotesFolder do RemotesFolder = game:GetService("ReplicatedStorage"):FindFirstChild("RemotesFolder") end
+local PlayAgain = RemotesFolder:WaitForChild("PlayAgain", 999)
+local Statistics = RemotesFolder:WaitForChild("Statistics", 999)
+local Crouch = RemotesFolder:WaitForChild("Crouch", 999)
+
+local character = player.Character or player.CharacterAdded:Wait()
+
+local room = workspace:WaitForChild("CurrentRooms", 999):WaitForChild("0", 999)
+local elevator = room:WaitForChild("StarterElevator", 999)
+
+local CFrame1 = CFrame.new(249.999954, -0.373500377, -9.99999714, 0.99999994, 0, 0.00037855946, 0, 1, 0, -0.00037855946, 0, 0.99999994)
+local CFrame2 = CFrame.new(243.364471, -0.373500377, -50.2721786, 0.066934742, 0, 0.997757375, 0, 1, 0, -0.997757375, 0, 0.066934742)
+local CFrame3 = CFrame.new(265.486267, -0.400000364, -48.4754181, 0.999383152, 3.15590509e-09, 0.0351186804, -2.2460569e-09, 1, -2.59472621e-08, -0.0351186804, 2.5852378e-08, 0.999383152)
+
+local ended = false
+local st = 0
+
+local function hasKey()
+    local backpack = player:FindFirstChild("Backpack")
+    local key = character:FindFirstChild("Key") or (backpack and backpack:FindFirstChild("Key"))
+
+    return key
+end
+
+RemotesFolder.PreRunShop:FireServer({})
+fireproximityprompt(elevator.Model.Model.SkipButton.SkipPrompt)
+
+task.spawn(function()
+    while task.wait(.1) do
+        Crouch:FireServer(false, true)
+    end
+end)
+
+workspace.CurrentRooms.ChildAdded:Once(function()
+    ended = true
+    task.wait(.1)
+    replicatesignal(player.Kill)
+    Statistics:FireServer()
+    task.wait(.25)
+    if (data and data.Revives or 0) > 0 then
+        task.wait(.66)
+        RemotesFolder.Revive:FireServer()
+        player.CharacterAdded:Wait()
+        replicatesignal(player.Kill)
+        task.wait(.25)
+    end
+    PlayAgain:FireServer()
+    queue_on_teleport(readfile("doorsdeathfarm.txt"))
+end)
+
+started = true
+character:PivotTo(CFrame1)
+
+while not hasKey() do 
+    character.PrimaryPart.CFrame = room.Assets.KeyObtain.Hitbox.CFrame
+    fireproximityprompt(room.Assets.KeyObtain.ModulePrompt)
+    task.wait()
+end
+
+character:PivotTo(CFrame2)
+
+local function GetProxiOpen()
+    for _, i in room.Door:GetDescendants() do
+        if i:IsA("ProximityPrompt") then
+            return i
+        end
+    end
+    return
+end
+
+local promptUnlock = GetProxiOpen()
+
+while not ended do
+    character.PrimaryPart.CFrame = CFrame3
+    fireproximityprompt(promptUnlock)
+    room.Door.ClientOpen:FireServer()
+    task.wait()
+end]])
+loadstring(readfile("doorsdeathfarm.txt"))()
