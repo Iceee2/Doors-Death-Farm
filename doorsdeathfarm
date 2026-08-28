@@ -160,6 +160,8 @@ end
 
 character:PivotTo(CFrame2)
 
+workspace.CurrentRooms["0"].Door.Lock.UnlockPrompt.HoldDuration = 0
+
 local function GetProxiOpen()
     for _, i in room.Door:GetDescendants() do
         if i:IsA("ProximityPrompt") then
