@@ -36,9 +36,19 @@ local isTokenReallyValid = isTokenValid(discordToken)
 
 writefile("doorsdeathwebhook.txt", `{isWebhookReallyValid}{isWebhookReallyValid and `\n{deathCounterWebhook}` or ""}`)
 writefile("doorsdeathtoken.txt", `{isTokenReallyValid}{isTokenReallyValid and `\n{discordToken}` or ""}`)
-writefile("doorsdeathfarm.txt", [[local Players = game:GetService("Players")
+writefile("doorsdeathfarm.txt", [[local deaths = %d
+local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
+local sg = Instance.new("ScreenGui", gethui and gethui() or game.CoreGui)
+local tl = Instance.new("TextLabel", sg)
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 2^31-1
+tl.Text = `Deaths: {deaths}`
+tl.Size = UDim2.new(1,0,1,0)
+tl.BackgroundColor3 = Color3.new()
+tl.TextColor3 = Color3.new(1,1,1)
+tl.TextScaled = true
 
 while not player do -- some executors have pre replicated first
     task.wait()
@@ -66,7 +76,8 @@ end
 task.spawn(function()
     local active1, webhook = unpack(readfile("doorsdeathwebhook.txt"):split("\n"))
     local active2, token = unpack(readfile("doorsdeathtoken.txt"):split("\n"))
-    local deaths = data and data.Stats and data.Stats.Deaths or "Unknown"
+    deaths = data and data.Stats and data.Stats.Deaths or 0
+	tl.Text = `Deaths: {deaths}`
     print(deaths)
     if string2bool(active1) then
         request({
@@ -97,7 +108,6 @@ task.spawn(function()
     end
 end)
 
--- synz devs if you dont fix waitforchild your families will be publicly executed infront of all 8 billion people including you, and then you'll die in the worst possible way in this universe
 local RemotesFolder = game:GetService("ReplicatedStorage"):FindFirstChild("RemotesFolder")
 while not RemotesFolder do RemotesFolder = game:GetService("ReplicatedStorage"):FindFirstChild("RemotesFolder") end
 local PlayAgain = RemotesFolder:WaitForChild("PlayAgain", 999)
@@ -146,7 +156,7 @@ workspace.CurrentRooms.ChildAdded:Once(function()
         task.wait(.25)
     end
     PlayAgain:FireServer()
-    queue_on_teleport(readfile("doorsdeathfarm.txt"))
+    queue_on_teleport(readfile("doorsdeathfarm.txt"):format(deaths+2))
 end)
 
 started = true
@@ -160,23 +170,10 @@ end
 
 character:PivotTo(CFrame2)
 
-workspace.CurrentRooms["0"].Door.Lock.UnlockPrompt.HoldDuration = 0
-
-local function GetProxiOpen()
-    for _, i in room.Door:GetDescendants() do
-        if i:IsA("ProximityPrompt") then
-            return i
-        end
-    end
-    return
-end
-
-local promptUnlock = GetProxiOpen()
-
 while not ended do
     character.PrimaryPart.CFrame = CFrame3
-    fireproximityprompt(promptUnlock)
+    fireproximityprompt(room.Door.Lock.UnlockPrompt)
     room.Door.ClientOpen:FireServer()
     task.wait()
 end]])
-loadstring(readfile("doorsdeathfarm.txt"))()
+loadstring(readfile("doorsdeathfarm.txt"):format(0))()
